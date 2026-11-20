@@ -1,0 +1,1748 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MINDLY — 오늘의 나를 돌보는 시간</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Pretendard & Noto Sans KR & Gowun Dodum -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ivory: '#FDFBF7',
+            cream: '#FAF5EE',
+            pastelPink: '#FFE4EC',
+            softPink: '#F9B8CE',
+            deepPink: '#E57A9E',
+            pastelLavender: '#EFE6FA',
+            softLavender: '#C9B1EA',
+            deepLavender: '#8B68C7',
+            warmText: '#3E3643',
+            mutedText: '#786E80',
+          },
+          fontFamily: {
+            sans: ['"Noto Sans KR"', 'sans-serif'],
+            emotional: ['"Gowun Dodum"', '"Noto Sans KR"', 'sans-serif'],
+          },
+          boxShadow: {
+            soft: '0 10px 30px -5px rgba(173, 142, 189, 0.16)',
+            card: '0 6px 20px -4px rgba(229, 122, 158, 0.12)',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background: linear-gradient(135deg, #FDFBF7 0%, #FFF4F7 50%, #F5EEFC 100%);
+      color: #3E3643;
+      min-height: 100vh;
+    }
+    .glass-card {
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.9);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #F39BB9 0%, #A986DF 100%);
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(169, 134, 223, 0.35);
+    }
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+    .menu-card {
+      transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .menu-card:hover {
+      transform: translateY(-5px);
+    }
+    .fade-in {
+      animation: fadeIn 0.35s ease-out forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    /* 커스텀 스크롤바 */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #FDFBF7;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #DFC8F2;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="font-sans antialiased selection:bg-pastelPink selection:text-warmText">
+
+  <!-- 토스트 알림 컨테이너 (alert 대신 사용) -->
+  <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-xs sm:max-w-sm pointer-events-none"></div>
+
+  <!-- 커스텀 확인 모달 (confirm 대신 사용) -->
+  <div id="confirm-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/30 backdrop-blur-xs p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-pastelPink fade-in">
+      <div class="w-12 h-12 rounded-2xl bg-pastelPink/60 flex items-center justify-center text-deepPink mb-4 mx-auto">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+        </svg>
+      </div>
+      <h3 id="confirm-title" class="text-lg font-bold text-center text-warmText mb-2">기록을 삭제할까요?</h3>
+      <p id="confirm-message" class="text-sm text-mutedText text-center mb-6 leading-relaxed">삭제한 기록은 다시 복구할 수 없어요.</p>
+      <div class="flex gap-3">
+        <button id="confirm-cancel-btn" class="flex-1 py-3 rounded-2xl bg-gray-100 hover:bg-gray-200 text-mutedText font-semibold text-sm transition">취소</button>
+        <button id="confirm-ok-btn" class="flex-1 py-3 rounded-2xl bg-rose-400 hover:bg-rose-500 text-white font-semibold text-sm shadow-sm transition">삭제하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- 1. 초기 설정 온보딩 화면 (최초 실행 시 또는 프로필 수정 시) -->
+  <!-- ========================================================= -->
+  <section id="onboarding-screen" class="min-h-screen flex items-center justify-center p-4 sm:p-6 hidden">
+    <div class="glass-card rounded-[2rem] shadow-soft max-w-xl w-full p-6 sm:p-10 fade-in">
+      <div class="text-center mb-8">
+        <span class="inline-block px-3.5 py-1 rounded-full bg-pastelLavender text-deepLavender text-xs font-bold tracking-wider mb-3">WELCOME TO MINDLY</span>
+        <h1 class="text-2xl sm:text-3xl font-bold text-warmText font-emotional mb-2">반가워요! 당신을 알려주세요 🌸</h1>
+        <p class="text-sm text-mutedText">입력한 정보에 맞춰 MINDLY AI가 꼭 맞는 조언을 준비해 드려요.</p>
+      </div>
+
+      <form id="onboarding-form" class="space-y-6" novalidate>
+        <!-- 1. 사용자 이름 -->
+        <div>
+          <label for="user-name" class="block text-sm font-bold text-warmText mb-2">1. 이름 또는 닉네임 <span class="text-deepPink">*</span></label>
+          <input type="text" id="user-name" placeholder="예: 지우, 하늘, 민준" maxlength="15"
+            class="w-full px-4 py-3.5 rounded-2xl bg-ivory border border-pastelPink focus:border-deepLavender focus:ring-2 focus:ring-pastelLavender outline-none transition text-sm" />
+        </div>
+
+        <!-- 2. 나이 / 신분 -->
+        <div>
+          <label class="block text-sm font-bold text-warmText mb-2">2. 현재 나이 / 신분 <span class="text-deepPink">*</span></label>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5" id="role-options">
+            <button type="button" data-role="중학생" class="role-btn py-3 px-3 rounded-2xl border border-pastelLavender bg-white hover:bg-pastelLavender/40 text-sm font-medium transition">🎒 중학생</button>
+            <button type="button" data-role="고등학생" class="role-btn py-3 px-3 rounded-2xl border border-pastelLavender bg-white hover:bg-pastelLavender/40 text-sm font-medium transition">📚 고등학생</button>
+            <button type="button" data-role="초등학생" class="role-btn py-3 px-3 rounded-2xl border border-pastelLavender bg-white hover:bg-pastelLavender/40 text-sm font-medium transition">✏️ 초등학생</button>
+            <button type="button" data-role="대학생" class="role-btn py-3 px-3 rounded-2xl border border-pastelLavender bg-white hover:bg-pastelLavender/40 text-sm font-medium transition">🎓 대학생</button>
+            <button type="button" data-role="직장인" class="role-btn py-3 px-3 rounded-2xl border border-pastelLavender bg-white hover:bg-pastelLavender/40 text-sm font-medium transition">💼 직장인</button>
+            <button type="button" data-role="기타" class="role-btn py-3 px-3 rounded-2xl border border-pastelLavender bg-white hover:bg-pastelLavender/40 text-sm font-medium transition">✨ 기타</button>
+          </div>
+          <input type="hidden" id="user-role" value="" />
+        </div>
+
+        <!-- 3. 주로 하는 고민 (중복 선택 가능) -->
+        <div>
+          <label class="block text-sm font-bold text-warmText mb-1">3. 요즘 가장 관심 있거나 고민되는 분야 <span class="text-deepPink">*</span></label>
+          <p class="text-xs text-mutedText mb-3">여러 개를 동시에 선택할 수 있어요!</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="concern-options">
+            <label class="concern-chip cursor-pointer flex items-center gap-3 p-3.5 rounded-2xl border border-pastelPink bg-white hover:bg-pastelPink/30 transition select-none">
+              <input type="checkbox" value="마음 돌봄" class="hidden concern-checkbox" />
+              <span class="w-8 h-8 rounded-xl bg-pastelPink flex items-center justify-center text-base">💗</span>
+              <div>
+                <div class="text-sm font-bold text-warmText">마음 돌봄</div>
+                <div class="text-xs text-mutedText">감정 기록, 스트레스 위로</div>
+              </div>
+            </label>
+            <label class="concern-chip cursor-pointer flex items-center gap-3 p-3.5 rounded-2xl border border-pastelPink bg-white hover:bg-pastelPink/30 transition select-none">
+              <input type="checkbox" value="피부 관리" class="hidden concern-checkbox" />
+              <span class="w-8 h-8 rounded-xl bg-pastelLavender flex items-center justify-center text-base">✨</span>
+              <div>
+                <div class="text-sm font-bold text-warmText">피부 관리</div>
+                <div class="text-xs text-mutedText">피부 타입별 루틴 추천</div>
+              </div>
+            </label>
+            <label class="concern-chip cursor-pointer flex items-center gap-3 p-3.5 rounded-2xl border border-pastelPink bg-white hover:bg-pastelPink/30 transition select-none">
+              <input type="checkbox" value="건강한 생활" class="hidden concern-checkbox" />
+              <span class="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-base">🥗</span>
+              <div>
+                <div class="text-sm font-bold text-warmText">건강한 생활</div>
+                <div class="text-xs text-mutedText">식단 밸런스, 수면과 운동</div>
+              </div>
+            </label>
+            <label class="concern-chip cursor-pointer flex items-center gap-3 p-3.5 rounded-2xl border border-pastelPink bg-white hover:bg-pastelPink/30 transition select-none">
+              <input type="checkbox" value="고민 상담" class="hidden concern-checkbox" />
+              <span class="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center text-base">💌</span>
+              <div>
+                <div class="text-sm font-bold text-warmText">고민 상담</div>
+                <div class="text-xs text-mutedText">진로, 친구, 학교생활 조언</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <button type="submit" class="w-full py-4 rounded-2xl btn-primary text-white font-bold text-base shadow-md">
+          MINDLY 시작하기 ✨
+        </button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ========================================================= -->
+  <!-- 2. 메인 앱 컨테이너 (상단 네비게이션 + 콘텐츠 영역)         -->
+  <!-- ========================================================= -->
+  <div id="app-shell" class="hidden min-h-screen flex flex-col">
+    <!-- 상단 헤더 -->
+    <header class="sticky top-0 z-30 glass-card border-b border-pastelPink/60 px-4 sm:px-8 py-3.5">
+      <div class="max-w-5xl mx-auto flex items-center justify-between gap-3">
+        <!-- 로고 및 홈 버튼 -->
+        <button onclick="navigateTo('home')" class="flex items-center gap-2.5 text-left group focus:outline-none">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-softPink to-softLavender flex items-center justify-center shadow-sm group-hover:scale-105 transition">
+            <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+          </div>
+          <div>
+            <span class="font-bold text-lg tracking-tight text-warmText block leading-none">MINDLY</span>
+            <span class="text-[11px] text-mutedText font-medium">AI 자기관리 파트너</span>
+          </div>
+        </button>
+
+        <!-- 사용자 프로필 요약 & 설정 버튼 -->
+        <div class="flex items-center gap-2 sm:gap-3">
+          <div id="header-profile-badge" class="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-ivory border border-pastelLavender text-xs font-medium text-warmText">
+            <span class="w-2 h-2 rounded-full bg-deepPink"></span>
+            <span id="header-user-info">사용자님</span>
+          </div>
+          <button onclick="openProfileEdit()" class="px-3.5 py-2 rounded-2xl bg-pastelLavender/70 hover:bg-pastelLavender text-deepLavender text-xs font-bold transition flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+            </svg>
+            <span>내 정보 수정</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- 메인 콘텐츠 영역 -->
+    <main class="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-8 py-6 sm:py-10">
+
+      <!-- ===================================== -->
+      <!-- VIEW 0: 메인 대시보드 화면             -->
+      <!-- ===================================== -->
+      <div id="view-home" class="fade-in space-y-8">
+        <!-- 히어로 배너 -->
+        <div class="glass-card rounded-[2rem] p-6 sm:p-10 shadow-soft relative overflow-hidden border border-pastelPink/70">
+          <div class="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-pastelPink/40 blur-2xl pointer-events-none"></div>
+          <div class="absolute -bottom-12 -left-12 w-48 h-48 rounded-full bg-pastelLavender/50 blur-2xl pointer-events-none"></div>
+
+          <div class="relative z-10">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/90 border border-pastelPink text-deepPink text-xs font-bold mb-4 shadow-2xs">
+              <span>🌷</span>
+              <span id="welcome-user-greeting">반가워요!</span>
+            </div>
+            <h1 class="text-2xl sm:text-4xl font-bold text-warmText font-emotional mb-2 leading-snug">
+              MINDLY — 오늘의 나를 돌보는 시간
+            </h1>
+            <p class="text-base sm:text-lg text-mutedText font-emotional mb-5">
+              "오늘은 어떤 하루를 보내고 있나요?"
+            </p>
+            <div id="user-focus-tags" class="flex flex-wrap gap-2"></div>
+          </div>
+        </div>
+
+        <!-- 4대 핵심 기능 카드 그리드 (4개 모두 커스텀 SVG 일러스트 완비) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
+          
+          <!-- ① 마음 돌봄 카드 (하트 + 새싹 + 구름 감성 일러스트) -->
+          <button onclick="navigateTo('mind')" class="menu-card glass-card rounded-[2rem] p-6 sm:p-7 text-left shadow-card border border-pastelPink hover:border-deepPink/50 flex flex-col justify-between group">
+            <div class="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <span class="inline-block px-3 py-1 rounded-full bg-pastelPink text-deepPink text-xs font-bold mb-2">01 · 감정 케어</span>
+                <h2 class="text-xl sm:text-2xl font-bold text-warmText group-hover:text-deepPink transition">마음 돌봄</h2>
+              </div>
+              <!-- 마음 돌봄 전용 SVG 일러스트 -->
+              <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-pastelPink to-rose-100 p-2.5 flex items-center justify-center shrink-0 shadow-2xs">
+                <svg viewBox="0 0 64 64" class="w-full h-full" fill="none">
+                  <circle cx="32" cy="32" r="28" fill="#FFF5F8"/>
+                  <!-- 따뜻한 하트 -->
+                  <path d="M32 50C32 50 14 38.5 14 25.5C14 19.7 18.7 15 24.5 15C27.9 15 30.9 16.6 32 19.1C33.1 16.6 36.1 15 39.5 15C45.3 15 50 19.7 50 25.5C50 38.5 32 50 32 50Z" fill="#F99BB8"/>
+                  <!-- 마음 속 피어나는 새싹 -->
+                  <path d="M32 36V25" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
+                  <path d="M32 29C32 25 27 23 25 25C25 28 28 30 32 29Z" fill="#A7E8BD"/>
+                  <path d="M32 27C32 23 37 21 39 23C39 26 36 28 32 27Z" fill="#86D9A3"/>
+                  <!-- 반짝이 -->
+                  <circle cx="19" cy="14" r="2" fill="#F6C85F"/>
+                  <circle cx="46" cy="14" r="1.5" fill="#C9B1EA"/>
+                </svg>
+              </div>
+            </div>
+            <p class="text-sm text-mutedText leading-relaxed mb-4">
+              오늘 느낀 기쁨, 설렘, 혹은 속상한 마음을 털어놓아 보세요. 감정의 온도에 맞춰 AI가 따뜻하게 공감해 드려요.
+            </p>
+            <div class="flex items-center justify-between pt-3 border-t border-pastelPink/50 text-xs font-bold text-deepPink">
+              <span id="count-mind">기록 0개</span>
+              <span class="group-hover:translate-x-1 transition">마음 기록하기 →</span>
+            </div>
+          </button>
+
+          <!-- ② 피부 관리 카드 (물방울 + 스킨케어 + 반짝임 일러스트) -->
+          <button onclick="navigateTo('skin')" class="menu-card glass-card rounded-[2rem] p-6 sm:p-7 text-left shadow-card border border-pastelLavender hover:border-deepLavender/50 flex flex-col justify-between group">
+            <div class="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <span class="inline-block px-3 py-1 rounded-full bg-pastelLavender text-deepLavender text-xs font-bold mb-2">02 · 스킨 루틴</span>
+                <h2 class="text-xl sm:text-2xl font-bold text-warmText group-hover:text-deepLavender transition">피부 관리</h2>
+              </div>
+              <!-- 피부 관리 전용 SVG 일러스트 -->
+              <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-pastelLavender to-purple-100 p-2.5 flex items-center justify-center shrink-0 shadow-2xs">
+                <svg viewBox="0 0 64 64" class="w-full h-full" fill="none">
+                  <circle cx="32" cy="32" r="28" fill="#F8F4FF"/>
+                  <!-- 수분 물방울 -->
+                  <path d="M32 13C32 13 20 27.5 20 36.5C20 43.1 25.4 48.5 32 48.5C38.6 48.5 44 43.1 44 36.5C44 27.5 32 13 32 13Z" fill="#B99CEB"/>
+                  <path d="M26 36C26 39.5 28.5 42.5 32 43" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
+                  <!-- 반짝임 별 -->
+                  <path d="M46 16L47.5 20.5L52 22L47.5 23.5L46 28L44.5 23.5L40 22L44.5 20.5L46 16Z" fill="#F99BB8"/>
+                  <circle cx="18" cy="22" r="2" fill="#F6C85F"/>
+                </svg>
+              </div>
+            </div>
+            <p class="text-sm text-mutedText leading-relaxed mb-4">
+              내 피부 타입과 고민에 딱 맞는 아침·저녁 스킨케어 순서와 성분 팁을 확인하고 피부 변화를 기록해요.
+            </p>
+            <div class="flex items-center justify-between pt-3 border-t border-pastelLavender/60 text-xs font-bold text-deepLavender">
+              <span id="count-skin">기록 0개</span>
+              <span class="group-hover:translate-x-1 transition">피부 루틴 보기 →</span>
+            </div>
+          </button>
+
+          <!-- ③ 건강한 생활 카드 (샐러드 볼 + 태양/활력 일러스트) -->
+          <button onclick="navigateTo('health')" class="menu-card glass-card rounded-[2rem] p-6 sm:p-7 text-left shadow-card border border-amber-200/80 hover:border-amber-400/60 flex flex-col justify-between group">
+            <div class="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <span class="inline-block px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-bold mb-2">03 · 웰니스 습관</span>
+                <h2 class="text-xl sm:text-2xl font-bold text-warmText group-hover:text-amber-700 transition">건강한 생활</h2>
+              </div>
+              <!-- 건강한 생활 전용 SVG 일러스트 -->
+              <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-100 to-orange-50 p-2.5 flex items-center justify-center shrink-0 shadow-2xs">
+                <svg viewBox="0 0 64 64" class="w-full h-full" fill="none">
+                  <circle cx="32" cy="32" r="28" fill="#FFFDF5"/>
+                  <!-- 신선한 잎사귀와 과일 -->
+                  <circle cx="26" cy="27" r="7" fill="#FF8A8A"/>
+                  <circle cx="38" cy="26" r="6" fill="#FFD166"/>
+                  <path d="M32 23C32 18 37 15 41 16C40 20 36 23 32 23Z" fill="#70D69A"/>
+                  <!-- 그릇 -->
+                  <path d="M16 31H48C48 40.5 40.8 48 32 48C23.2 48 16 40.5 16 31Z" fill="#F4A261"/>
+                  <rect x="24" y="48" width="16" height="3" rx="1.5" fill="#E76F51"/>
+                </svg>
+              </div>
+            </div>
+            <p class="text-sm text-mutedText leading-relaxed mb-4">
+              성장기에 꼭 필요한 균형 잡힌 식단과 수면, 활기찬 신체 활동 습관을 기록하고 건강한 피드백을 받아요.
+            </p>
+            <div class="flex items-center justify-between pt-3 border-t border-amber-200/60 text-xs font-bold text-amber-700">
+              <span id="count-health">기록 0개</span>
+              <span class="group-hover:translate-x-1 transition">식단·습관 기록 →</span>
+            </div>
+          </button>
+
+          <!-- ④ 고민 상담 카드 (따뜻한 편지 + 말풍선 일러스트) -->
+          <button onclick="navigateTo('counsel')" class="menu-card glass-card rounded-[2rem] p-6 sm:p-7 text-left shadow-card border border-teal-200/80 hover:border-teal-400/60 flex flex-col justify-between group">
+            <div class="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <span class="inline-block px-3 py-1 rounded-full bg-teal-100 text-teal-800 text-xs font-bold mb-2">04 · 진로·관계</span>
+                <h2 class="text-xl sm:text-2xl font-bold text-warmText group-hover:text-teal-700 transition">고민 상담</h2>
+              </div>
+              <!-- 고민 상담 전용 SVG 일러스트 -->
+              <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-100 to-emerald-50 p-2.5 flex items-center justify-center shrink-0 shadow-2xs">
+                <svg viewBox="0 0 64 64" class="w-full h-full" fill="none">
+                  <circle cx="32" cy="32" r="28" fill="#F4FBF9"/>
+                  <!-- 말풍선 -->
+                  <rect x="14" y="18" width="36" height="25" rx="8" fill="#7ED4C1"/>
+                  <path d="M23 43L18 49V43H23Z" fill="#7ED4C1"/>
+                  <!-- 말풍선 속 하트/점 -->
+                  <circle cx="25" cy="30.5" r="2.2" fill="#FFFFFF"/>
+                  <circle cx="32" cy="30.5" r="2.2" fill="#FFFFFF"/>
+                  <circle cx="39" cy="30.5" r="2.2" fill="#FFFFFF"/>
+                  <!-- 작은 핑크 하트 뱃지 -->
+                  <circle cx="47" cy="19" r="6" fill="#F99BB8"/>
+                  <path d="M47 22C47 22 43.5 19.6 43.5 17.5C43.5 16.4 44.4 15.5 45.5 15.5C46.2 15.5 46.7 15.8 47 16.3C47.3 15.8 47.8 15.5 48.5 15.5C49.6 15.5 50.5 16.4 50.5 17.5C50.5 19.6 47 22 47 22Z" fill="#FFFFFF"/>
+                </svg>
+              </div>
+            </div>
+            <p class="text-sm text-mutedText leading-relaxed mb-4">
+              진로, 친구, 가족, 학교생활 고민을 다양한 시선으로 바라보고 내가 직접 실천할 작은 계획을 세워봐요.
+            </p>
+            <div class="flex items-center justify-between pt-3 border-t border-teal-200/60 text-xs font-bold text-teal-700">
+              <span id="count-counsel">기록 0개</span>
+              <span class="group-hover:translate-x-1 transition">고민 나누기 →</span>
+            </div>
+          </button>
+        </div>
+
+        <!-- 안내 푸터 배너 (데이터 저장 및 안전 안내) -->
+        <div class="rounded-3xl bg-white/70 border border-pastelLavender/70 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-mutedText">
+          <div class="flex items-center gap-2.5">
+            <span class="text-base">🔒</span>
+            <span>모든 기록은 현재 기기(브라우저 로컬 저장소)에만 안전하게 보관되며 외부 서버에 공개되지 않습니다.</span>
+          </div>
+          <button onclick="resetSampleData()" class="text-deepLavender hover:underline font-semibold shrink-0">예시 데이터 다시 불러오기</button>
+        </div>
+      </div>
+
+      <!-- ===================================== -->
+      <!-- VIEW 1: 마음 돌봄 화면                 -->
+      <!-- ===================================== -->
+      <div id="view-mind" class="hidden fade-in space-y-6">
+        <div class="flex items-center justify-between">
+          <button onclick="navigateTo('home')" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-white border border-pastelPink text-sm font-bold text-warmText hover:bg-pastelPink/30 transition">
+            <span>←</span>
+            <span>메인으로</span>
+          </button>
+          <span class="px-3.5 py-1 rounded-full bg-pastelPink text-deepPink text-xs font-bold">01 · 마음 돌봄</span>
+        </div>
+
+        <div class="glass-card rounded-[2rem] p-6 sm:p-8 shadow-soft border border-pastelPink">
+          <h2 class="text-xl sm:text-2xl font-bold text-warmText font-emotional mb-1">오늘 마음의 날씨는 어떤가요? ☁️🌷</h2>
+          <p class="text-sm text-mutedText mb-6">기쁜 일은 함께 기뻐하고, 힘든 마음은 따뜻하게 다독여 드릴게요.</p>
+
+          <form id="mind-form" class="space-y-5" novalidate>
+            <!-- 감정 선택 버튼 -->
+            <div>
+              <label class="block text-sm font-bold text-warmText mb-2">지금 가장 가까운 감정 <span class="text-deepPink">*</span></label>
+              <div class="grid grid-cols-3 sm:grid-cols-6 gap-2" id="emotion-selector">
+                <button type="button" data-emotion="행복해요" data-valence="positive" class="emotion-btn p-2.5 rounded-2xl border border-pastelPink bg-white hover:bg-pastelPink/30 text-center transition">
+                  <div class="text-xl mb-1">🥰</div>
+                  <div class="text-xs font-bold">행복해요</div>
+                </button>
+                <button type="button" data-emotion="뿌듯해요" data-valence="positive" class="emotion-btn p-2.5 rounded-2xl border border-pastelPink bg-white hover:bg-pastelPink/30 text-center transition">
+                  <div class="text-xl mb-1">🥳</div>
+                  <div class="text-xs font-bold">뿌듯해요</div>
+                </button>
+                <button type="button" data-emotion="설레요" data-valence="positive" class="emotion-btn p-2.5 rounded-2xl border border-pastelPink bg-white hover:bg-pastelPink/30 text-center transition">
+                  <div class="text-xl mb-1">💓</div>
+                  <div class="text-xs font-bold">설레요</div>
+                </button>
+                <button type="button" data-emotion="우울해요" data-valence="negative" class="emotion-btn p-2.5 rounded-2xl border border-pastelPink bg-white hover:bg-pastelPink/30 text-center transition">
+                  <div class="text-xl mb-1">😢</div>
+                  <div class="text-xs font-bold">우울해요</div>
+                </button>
+                <button type="button" data-emotion="불안·스트레스" data-valence="negative" class="emotion-btn p-2.5 rounded-2xl border border-pastelPink bg-white hover:bg-pastelPink/30 text-center transition">
+                  <div class="text-xl mb-1">😰</div>
+                  <div class="text-xs font-bold">불안·긴장</div>
+                </button>
+                <button type="button" data-emotion="화나고 답답해요" data-valence="negative" class="emotion-btn p-2.5 rounded-2xl border border-pastelPink bg-white hover:bg-pastelPink/30 text-center transition">
+                  <div class="text-xl mb-1">😤</div>
+                  <div class="text-xs font-bold">답답해요</div>
+                </button>
+              </div>
+              <input type="hidden" id="mind-emotion" value="" />
+              <input type="hidden" id="mind-valence" value="" />
+            </div>
+
+            <!-- 마음 이야기 입력 -->
+            <div>
+              <label for="mind-content" class="block text-sm font-bold text-warmText mb-2">오늘 있었던 일이나 마음속 이야기 <span class="text-deepPink">*</span></label>
+              <textarea id="mind-content" rows="4" placeholder="예: 오늘 수학 시험을 생각보다 잘 봐서 너무 행복해! / 친구랑 사소한 오해가 생겨서 마음이 무거워요."
+                class="w-full p-4 rounded-2xl bg-ivory border border-pastelPink focus:border-deepPink focus:ring-2 focus:ring-pastelPink outline-none transition text-sm leading-relaxed"></textarea>
+            </div>
+
+            <button type="submit" id="mind-submit-btn" class="w-full py-3.5 rounded-2xl btn-primary text-white font-bold text-sm sm:text-base shadow-md flex items-center justify-center gap-2">
+              <span>AI 마음 공감 받기 & 기록 저장</span>
+            </button>
+          </form>
+
+          <!-- AI 응답 영역 -->
+          <div id="mind-ai-result" class="hidden mt-6 p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-pastelPink/45 to-pastelLavender/45 border border-pastelPink fade-in">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="w-7 h-7 rounded-full bg-deepPink text-white flex items-center justify-center text-xs font-bold">AI</span>
+              <h3 class="font-bold text-warmText text-sm sm:text-base">MINDLY의 따뜻한 답장</h3>
+            </div>
+            <div id="mind-ai-text" class="text-sm text-warmText leading-relaxed whitespace-pre-line"></div>
+            <div id="mind-help-notice" class="hidden mt-4 pt-3 border-t border-deepPink/20 text-xs text-mutedText">
+              💛 <strong>도움 안내:</strong> MINDLY는 전문적인 의학적 진단이나 치료를 대신하지 않아요. 마음이 너무 힘들 때는 부모님, 선생님, 학교 상담실(Wee클래스) 또는 청소년상담복지센터(☎ 1388)에 꼭 도움을 요청해 보세요.
+            </div>
+          </div>
+        </div>
+
+        <!-- 이전 마음 기록 목록 -->
+        <div class="glass-card rounded-[2rem] p-6 sm:p-8 shadow-card border border-pastelPink/70">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-5">
+            <div>
+              <h3 class="text-lg font-bold text-warmText">나의 마음 기록장</h3>
+              <p class="text-xs text-mutedText">예시 데이터와 내가 직접 남긴 기록을 확인할 수 있어요.</p>
+            </div>
+            <button type="button" onclick="confirmDeleteAll('mind')" class="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-bold transition">
+              🗑️ 마음 기록 전체 삭제
+            </button>
+          </div>
+          <div id="mind-history-list" class="space-y-4"></div>
+        </div>
+      </div>
+
+      <!-- ===================================== -->
+      <!-- VIEW 2: 피부 관리 화면                 -->
+      <!-- ===================================== -->
+      <div id="view-skin" class="hidden fade-in space-y-6">
+        <div class="flex items-center justify-between">
+          <button onclick="navigateTo('home')" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-white border border-pastelLavender text-sm font-bold text-warmText hover:bg-pastelLavender/30 transition">
+            <span>←</span>
+            <span>메인으로</span>
+          </button>
+          <span class="px-3.5 py-1 rounded-full bg-pastelLavender text-deepLavender text-xs font-bold">02 · 피부 관리</span>
+        </div>
+
+        <div class="glass-card rounded-[2rem] p-6 sm:p-8 shadow-soft border border-pastelLavender">
+          <h2 class="text-xl sm:text-2xl font-bold text-warmText font-emotional mb-1">오늘 내 피부 컨디션 체크 ✨</h2>
+          <p class="text-sm text-mutedText mb-6">피부 유형과 고민에 따라 아침·저녁 루틴과 성분 선택 팁을 다르게 제안해 드려요.</p>
+
+          <form id="skin-form" class="space-y-5" novalidate>
+            <!-- 피부 유형 선택 -->
+            <div>
+              <label class="block text-sm font-bold text-warmText mb-2">1. 나의 피부 유형 <span class="text-deepPink">*</span></label>
+              <div class="grid grid-cols-2 sm:grid-cols-5 gap-2" id="skin-type-selector">
+                <button type="button" data-skintype="지성" class="skintype-btn py-2.5 px-3 rounded-2xl border border-pastelLavender bg-white hover:bg-pastelLavender/30 text-xs sm:text-sm font-bold transition">💧 지성</button>
+                <button type="button" data-skintype="건성" class="skintype-btn py-2.5 px-3 rounded-2xl border border-pastelLavender bg-white hover:bg-pastelLavender/30 text-xs sm:text-sm font-bold transition">🏜️ 건성</button>
+                <button type="button" data-skintype="복합성" class="skintype-btn py-2.5 px-3 rounded-2xl border border-pastelLavender bg-white hover:bg-pastelLavender/30 text-xs sm:text-sm font-bold transition">🌓 복합성</button>
+                <button type="button" data-skintype="중성" class="skintype-btn py-2.5 px-3 rounded-2xl border border-pastelLavender bg-white hover:bg-pastelLavender/30 text-xs sm:text-sm font-bold transition">🌿 중성</button>
+                <button type="button" data-skintype="민감성" class="skintype-btn py-2.5 px-3 rounded-2xl border border-pastelLavender bg-white hover:bg-pastelLavender/30 text-xs sm:text-sm font-bold transition">🌸 민감성</button>
+              </div>
+              <input type="hidden" id="skin-type" value="" />
+            </div>
+
+            <!-- 현재 피부 상태 점수 (이전 기록과 비교해 호전 시 칭찬 멘트 제공) -->
+            <div>
+              <label class="block text-sm font-bold text-warmText mb-2">2. 오늘 느끼는 피부 컨디션 점수 (1점~5점) <span class="text-deepPink">*</span></label>
+              <div class="grid grid-cols-5 gap-2" id="skin-score-selector">
+                <button type="button" data-score="1" class="skinscore-btn py-2.5 rounded-2xl border border-pastelLavender bg-white text-xs font-bold transition">1점 (많이 뒤집어짐)</button>
+                <button type="button" data-score="2" class="skinscore-btn py-2.5 rounded-2xl border border-pastelLavender bg-white text-xs font-bold transition">2점 (트러블·건조함)</button>
+                <button type="button" data-score="3" class="skinscore-btn py-2.5 rounded-2xl border border-pastelLavender bg-white text-xs font-bold transition">3점 (보통이에요)</button>
+                <button type="button" data-score="4" class="skinscore-btn py-2.5 rounded-2xl border border-pastelLavender bg-white text-xs font-bold transition">4점 (많이 진정됨)</button>
+                <button type="button" data-score="5" class="skinscore-btn py-2.5 rounded-2xl border border-pastelLavender bg-white text-xs font-bold transition">5점 (매우 맑고 촉촉)</button>
+              </div>
+              <input type="hidden" id="skin-score" value="" />
+            </div>
+
+            <!-- 피부 고민 입력 -->
+            <div>
+              <label for="skin-concern" class="block text-sm font-bold text-warmText mb-2">3. 구체적인 피부 고민 <span class="text-deepPink">*</span></label>
+              <textarea id="skin-concern" rows="3" placeholder="예: 이마와 코에 유분이 많고 좁쌀 여드름이 올라와요 / 볼이 쉽게 빨개지고 세안 후 당겨요."
+                class="w-full p-4 rounded-2xl bg-ivory border border-pastelLavender focus:border-deepLavender focus:ring-2 focus:ring-pastelLavender outline-none transition text-sm"></textarea>
+            </div>
+
+            <!-- 현재 사용하는 스킨케어 제품 -->
+            <div>
+              <label for="skin-products" class="block text-sm font-bold text-warmText mb-2">4. 현재 사용 중인 스킨케어 제품 (선택)</label>
+              <input type="text" id="skin-products" placeholder="예: 약산성 폼클렌저, 진정 토너, 수분 로션"
+                class="w-full px-4 py-3 rounded-2xl bg-ivory border border-pastelLavender focus:border-deepLavender outline-none transition text-sm" />
+            </div>
+
+            <!-- 피부 사진 업로드 (단순 기록용 미리보기와 텍스트 분석 구분 명확히 안내) -->
+            <div class="p-4 rounded-2xl bg-ivory border border-dashed border-softLavender">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                <label for="skin-photo" class="text-sm font-bold text-warmText cursor-pointer">5. 오늘 피부 상태 사진 기록 (선택 · 기기 내 미리보기 전용)</label>
+                <span class="inline-block px-2.5 py-0.5 rounded-full bg-pastelLavender text-deepLavender text-[11px] font-bold">개인 기록용 (AI 이미지 분석 미지원)</span>
+              </div>
+              <p class="text-xs text-mutedText mb-3">
+                ※ 현재 버전에서는 개인정보 보호를 위해 사진을 서버로 전송하지 않으며, <strong>사용자가 직접 입력한 피부 유형과 고민 텍스트를 기반</strong>으로 맞춤 루틴을 추천합니다.
+              </p>
+              <input type="file" id="skin-photo" accept="image/*" class="text-xs text-mutedText file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-pastelLavender file:text-deepLavender hover:file:bg-softLavender/50 cursor-pointer" />
+              <div id="skin-photo-preview-wrap" class="hidden mt-3">
+                <img id="skin-photo-preview" alt="피부 기록 미리보기" class="w-28 h-28 object-cover rounded-2xl border border-pastelLavender shadow-xs" />
+              </div>
+            </div>
+
+            <button type="submit" id="skin-submit-btn" class="w-full py-3.5 rounded-2xl btn-primary text-white font-bold text-sm sm:text-base shadow-md">
+              맞춤 스킨케어 루틴 추천받기 ✨
+            </button>
+          </form>
+
+          <!-- AI 피부 관리 추천 결과 -->
+          <div id="skin-ai-result" class="hidden mt-6 p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-pastelLavender/50 to-pastelPink/40 border border-pastelLavender fade-in">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="w-7 h-7 rounded-full bg-deepLavender text-white flex items-center justify-center text-xs font-bold">AI</span>
+              <h3 class="font-bold text-warmText text-sm sm:text-base">맞춤 스킨케어 순서 & 성분 가이드</h3>
+            </div>
+            <div id="skin-ai-text" class="text-sm text-warmText leading-relaxed whitespace-pre-line"></div>
+            <div class="mt-4 pt-3 border-t border-deepLavender/20 text-xs text-mutedText">
+              ℹ️ <strong>안내:</strong> 본 추천은 입력하신 피부 정보를 바탕으로 한 생활 스킨케어 참고 정보이며, 피부 질환에 대한 의학적 진단이 아닙니다. 증상이 심할 경우 피부과 전문의와 상담하세요.
+            </div>
+          </div>
+        </div>
+
+        <!-- 피부 관리 기록 목록 -->
+        <div class="glass-card rounded-[2rem] p-6 sm:p-8 shadow-card border border-pastelLavender/70">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-5">
+            <div>
+              <h3 class="text-lg font-bold text-warmText">나의 피부 케어 기록</h3>
+              <p class="text-xs text-mutedText">이전 기록과 비교해 피부 컨디션 변화를 확인해 보세요.</p>
+            </div>
+            <button type="button" onclick="confirmDeleteAll('skin')" class="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-bold transition">
+              🗑️ 피부 기록 전체 삭제
+            </button>
+          </div>
+          <div id="skin-history-list" class="space-y-4"></div>
+        </div>
+      </div>
+
+      <!-- ===================================== -->
+      <!-- VIEW 3: 건강한 생활 화면               -->
+      <!-- ===================================== -->
+      <div id="view-health" class="hidden fade-in space-y-6">
+        <div class="flex items-center justify-between">
+          <button onclick="navigateTo('home')" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-white border border-amber-200 text-sm font-bold text-warmText hover:bg-amber-50 transition">
+            <span>←</span>
+            <span>메인으로</span>
+          </button>
+          <span class="px-3.5 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-bold">03 · 건강한 생활</span>
+        </div>
+
+        <div class="glass-card rounded-[2rem] p-6 sm:p-8 shadow-soft border border-amber-200/80">
+          <h2 class="text-xl sm:text-2xl font-bold text-warmText font-emotional mb-1">오늘의 식단과 생활 리듬 기록 🥗</h2>
+          <p class="text-sm text-mutedText mb-6">무리한 다이어트가 아닌, 성장과 활력을 돕는 균형 잡힌 식사와 습관을 함께 만들어요.</p>
+
+          <form id="health-form" class="space-y-5" novalidate>
+            <!-- 식단 입력 그리드 -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label for="meal-breakfast" class="block text-xs font-bold text-warmText mb-1.5">🌅 아침 식사</label>
+                <input type="text" id="meal-breakfast" placeholder="예: 잡곡밥, 미역국, 계란말이 (또는 거름)"
+                  class="w-full px-4 py-3 rounded-2xl bg-ivory border border-amber-200 focus:border-amber-400 outline-none text-sm" />
+              </div>
+              <div>
+                <label for="meal-lunch" class="block text-xs font-bold text-warmText mb-1.5">☀️ 점심 식사 (급식/도시락 등)</label>
+                <input type="text" id="meal-lunch" placeholder="예: 학교 급식(카레라이스, 깍두기, 요구르트)"
+                  class="w-full px-4 py-3 rounded-2xl bg-ivory border border-amber-200 focus:border-amber-400 outline-none text-sm" />
+              </div>
+              <div>
+                <label for="meal-dinner" class="block text-xs font-bold text-warmText mb-1.5">🌙 저녁 식사</label>
+                <input type="text" id="meal-dinner" placeholder="예: 닭가슴살 볶음밥, 샐러드"
+                  class="w-full px-4 py-3 rounded-2xl bg-ivory border border-amber-200 focus:border-amber-400 outline-none text-sm" />
+              </div>
+              <div>
+                <label for="meal-snack" class="block text-xs font-bold text-warmText mb-1.5">🍎 간식 및 수분 섭취</label>
+                <input type="text" id="meal-snack" placeholder="예: 바나나 1개, 물 5잔"
+                  class="w-full px-4 py-3 rounded-2xl bg-ivory border border-amber-200 focus:border-amber-400 outline-none text-sm" />
+              </div>
+            </div>
+
+            <!-- 수면, 운동 및 선택적 체중 기록 -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label for="health-sleep" class="block text-xs font-bold text-warmText mb-1.5">😴 수면 시간 (시간) <span class="text-deepPink">*</span></label>
+                <input type="number" id="health-sleep" min="1" max="16" step="0.5" placeholder="예: 7.5"
+                  class="w-full px-4 py-3 rounded-2xl bg-ivory border border-amber-200 focus:border-amber-400 outline-none text-sm" />
+              </div>
+              <div>
+                <label for="health-activity" class="block text-xs font-bold text-warmText mb-1.5">🏃 오늘의 활동 / 컨디션 <span class="text-deepPink">*</span></label>
+                <select id="health-activity" class="w-full px-4 py-3 rounded-2xl bg-ivory border border-amber-200 focus:border-amber-400 outline-none text-sm">
+                  <option value="">선택해 주세요</option>
+                  <option value="활기차게 운동/산책함">활기차게 운동·산책함 (상)</option>
+                  <option value="가벼운 스트레칭/걷기">가벼운 스트레칭·등하교 걷기 (중)</option>
+                  <option value="거의 앉아서 생활함">거의 앉아서 생활함 (하)</option>
+                </select>
+              </div>
+              <div>
+                <label for="health-weight" class="block text-xs font-bold text-warmText mb-1.5">⚖️ 체중 기록 (선택사항, kg)</label>
+                <input type="number" id="health-weight" min="20" max="200" step="0.1" placeholder="비워두어도 괜찮아요"
+                  class="w-full px-4 py-3 rounded-2xl bg-ivory border border-amber-200 focus:border-amber-400 outline-none text-sm" />
+              </div>
+            </div>
+
+            <button type="submit" id="health-submit-btn" class="w-full py-3.5 rounded-2xl btn-primary text-white font-bold text-sm sm:text-base shadow-md">
+              식단 & 생활 습관 AI 피드백 받기 🌿
+            </button>
+          </form>
+
+          <!-- AI 건강 피드백 결과 -->
+          <div id="health-ai-result" class="hidden mt-6 p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-amber-50 to-pastelPink/30 border border-amber-200 fade-in">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="w-7 h-7 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold">AI</span>
+              <h3 class="font-bold text-warmText text-sm sm:text-base">건강한 성장을 위한 맞춤 피드백</h3>
+            </div>
+            <div id="health-ai-text" class="text-sm text-warmText leading-relaxed whitespace-pre-line"></div>
+          </div>
+        </div>
+
+        <!-- 건강 생활 기록 목록 -->
+        <div class="glass-card rounded-[2rem] p-6 sm:p-8 shadow-card border border-amber-200/70">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-5">
+            <div>
+              <h3 class="text-lg font-bold text-warmText">나의 식단·생활 기록장</h3>
+              <p class="text-xs text-mutedText">꾸준한 기록이 건강한 몸과 마음을 만들어요.</p>
+            </div>
+            <button type="button" onclick="confirmDeleteAll('health')" class="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-bold transition">
+              🗑️ 건강 기록 전체 삭제
+            </button>
+          </div>
+          <div id="health-history-list" class="space-y-4"></div>
+        </div>
+      </div>
+
+      <!-- ===================================== -->
+      <!-- VIEW 4: 고민 상담 화면                 -->
+      <!-- ===================================== -->
+      <div id="view-counsel" class="hidden fade-in space-y-6">
+        <div class="flex items-center justify-between">
+          <button onclick="navigateTo('home')" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-white border border-teal-200 text-sm font-bold text-warmText hover:bg-teal-50 transition">
+            <span>←</span>
+            <span>메인으로</span>
+          </button>
+          <span class="px-3.5 py-1 rounded-full bg-teal-100 text-teal-800 text-xs font-bold">04 · 고민 상담</span>
+        </div>
+
+        <div class="glass-card rounded-[2rem] p-6 sm:p-8 shadow-soft border border-teal-200/80">
+          <h2 class="text-xl sm:text-2xl font-bold text-warmText font-emotional mb-1">혼자 끙끙 앓던 고민, 함께 풀어봐요 💌</h2>
+          <p class="text-sm text-mutedText mb-6">공감부터 다양한 관점 살펴보기, 현실적인 실천 계획까지 단계별로 도와드릴게요.</p>
+
+          <form id="counsel-form" class="space-y-5" novalidate>
+            <!-- 고민 분야 선택 -->
+            <div>
+              <label class="block text-sm font-bold text-warmText mb-2">1. 어떤 분야의 고민인가요? <span class="text-deepPink">*</span></label>
+              <div class="grid grid-cols-2 sm:grid-cols-5 gap-2" id="counsel-category-selector">
+                <button type="button" data-cat="친구 관계" class="counselcat-btn py-2.5 px-3 rounded-2xl border border-teal-200 bg-white hover:bg-teal-50 text-xs sm:text-sm font-bold transition">🤝 친구 관계</button>
+                <button type="button" data-cat="진로·적성" class="counselcat-btn py-2.5 px-3 rounded-2xl border border-teal-200 bg-white hover:bg-teal-50 text-xs sm:text-sm font-bold transition">🧭 진로·적성</button>
+                <button type="button" data-cat="학업·성적" class="counselcat-btn py-2.5 px-3 rounded-2xl border border-teal-200 bg-white hover:bg-teal-50 text-xs sm:text-sm font-bold transition">📖 학업·성적</button>
+                <button type="button" data-cat="가족 관계" class="counselcat-btn py-2.5 px-3 rounded-2xl border border-teal-200 bg-white hover:bg-teal-50 text-xs sm:text-sm font-bold transition">🏡 가족 관계</button>
+                <button type="button" data-cat="학교생활·기타" class="counselcat-btn py-2.5 px-3 rounded-2xl border border-teal-200 bg-white hover:bg-teal-50 text-xs sm:text-sm font-bold transition">🏫 학교생활</button>
+              </div>
+              <input type="hidden" id="counsel-category" value="" />
+            </div>
+
+            <!-- 고민 내용 입력 -->
+            <div>
+              <label for="counsel-content" class="block text-sm font-bold text-warmText mb-2">2. 구체적인 상황과 고민 내용 <span class="text-deepPink">*</span></label>
+              <textarea id="counsel-content" rows="4" placeholder="예: 친한 친구가 요즘 다른 친구들과만 어울리는 것 같아서 서운하고 어떻게 다가가야 할지 모르겠어요. / 좋아하는 게 뭔지 몰라서 진로 희망서를 쓰기가 막막해요."
+                class="w-full p-4 rounded-2xl bg-ivory border border-teal-200 focus:border-teal-400 outline-none text-sm leading-relaxed"></textarea>
+            </div>
+
+            <button type="submit" id="counsel-submit-btn" class="w-full py-3.5 rounded-2xl btn-primary text-white font-bold text-sm sm:text-base shadow-md">
+              AI 관점 분석 & 해결 방법 제안받기 💬
+            </button>
+          </form>
+
+          <!-- AI 상담 결과 + 나의 실천 계획 작성 -->
+          <div id="counsel-ai-result" class="hidden mt-6 p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-teal-50 to-pastelLavender/40 border border-teal-200 fade-in space-y-4">
+            <div class="flex items-center gap-2">
+              <span class="w-7 h-7 rounded-full bg-teal-600 text-white flex items-center justify-center text-xs font-bold">AI</span>
+              <h3 class="font-bold text-warmText text-sm sm:text-base">MINDLY의 다각도 상담 리포트</h3>
+            </div>
+            <div id="counsel-ai-text" class="text-sm text-warmText leading-relaxed whitespace-pre-line"></div>
+
+            <!-- 사용자가 직접 선택/작성하는 실천 계획 -->
+            <div class="pt-4 border-t border-teal-200/70">
+              <label for="counsel-action-plan" class="block text-xs font-bold text-teal-800 mb-2">✍️ 내가 선택한 해결 방법 및 작은 실천 계획 적기</label>
+              <div class="flex flex-col sm:flex-row gap-2">
+                <input type="text" id="counsel-action-plan" placeholder="예: 내일 쉬는 시간에 먼저 웃으면서 인사하고 간식 나눠 먹기"
+                  class="flex-1 px-4 py-2.5 rounded-xl bg-white border border-teal-200 text-sm outline-none focus:border-teal-500" />
+                <button type="button" onclick="saveActionPlanToLatestCounsel()" class="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition shrink-0">
+                  실천 계획 저장하기
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 고민 상담 기록 목록 -->
+        <div class="glass-card rounded-[2rem] p-6 sm:p-8 shadow-card border border-teal-200/70">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-5">
+            <div>
+              <h3 class="text-lg font-bold text-warmText">나의 고민 상담 & 실천 기록</h3>
+              <p class="text-xs text-mutedText">내가 세운 작은 실천 계획들을 돌아보며 한 걸음씩 성장해요.</p>
+            </div>
+            <button type="button" onclick="confirmDeleteAll('counsel')" class="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-bold transition">
+              🗑️ 상담 기록 전체 삭제
+            </button>
+          </div>
+          <div id="counsel-history-list" class="space-y-4"></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- JAVASCRIPT: 상태 관리, 실제 Gemini AI 연동, 로컬 스토리지 CRUD -->
+  <!-- ========================================================= -->
+  <script>
+    /**
+     * MINDLY 애플리케이션 전역 상태 및 스토리지 키 정의
+     */
+    const STORAGE_KEYS = {
+      PROFILE: 'mindly_user_profile_v2',
+      MIND: 'mindly_records_mind_v2',
+      SKIN: 'mindly_records_skin_v2',
+      HEALTH: 'mindly_records_health_v2',
+      COUNSEL: 'mindly_records_counsel_v2',
+    };
+
+    // Gemini API 설정 (런타임 환경에서 자동 키 주입)
+    const GEMINI_API_KEY = "";
+    const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${GEMINI_API_KEY}`;
+
+    let userProfile = null;
+    let records = {
+      mind: [],
+      skin: [],
+      health: [],
+      counsel: []
+    };
+    let latestCounselId = null;
+
+    /**
+     * 초기 샘플 데이터 (예시 데이터와 실제 사용자 데이터를 명확히 구분하기 위해 isSample: true 부여)
+     */
+    function getDefaultSamples() {
+      return {
+        mind: [
+          {
+            id: 'sample-mind-1',
+            isSample: true,
+            date: '2026-11-11 20:30',
+            emotion: '뿌듯해요',
+            valence: 'positive',
+            content: '수행평가 발표 준비를 며칠 동안 열심히 했는데 친구들이 발표 잘했다고 칭찬해 줬어요!',
+            aiResponse: '와, 정말 멋져요! 며칠 동안 꾸준히 노력한 결실이 친구들의 따뜻한 칭찬으로 돌아왔네요. 스스로를 믿고 끝까지 해낸 자신을 마음껏 칭찬해 주는 행복한 밤이 되길 바라요! 🎉✨'
+          },
+          {
+            id: 'sample-mind-2',
+            isSample: true,
+            date: '2026-11-10 21:15',
+            emotion: '불안·스트레스',
+            valence: 'negative',
+            content: '시험 기간이 다가오는데 계획한 만큼 진도가 안 나가서 자꾸 초조해져요.',
+            aiResponse: '계획대로 진도가 나가지 않아 마음이 많이 조급하고 답답했겠어요. 그만큼 잘 해내고 싶은 마음이 크다는 뜻이기도 해요.\n\n[마음을 다독이는 작은 방법]\n1. 오늘 해야 할 분량을 30분 단위로 아주 작게 쪼개어 하나씩만 완료해 보세요.\n2. 잠들기 10분 전에는 책을 덮고 따뜻한 물을 마시며 깊게 숨을 들이마시고 내쉬어 보세요.\n\n혼자 감당하기 벅찰 땐 담임선생님이나 부모님께 현재 공부 고민을 솔직하게 털어놓아 보는 것도 큰 힘이 됩니다.'
+          }
+        ],
+        skin: [
+          {
+            id: 'sample-skin-1',
+            isSample: true,
+            date: '2026-11-10 22:00',
+            skinType: '복합성',
+            score: 2,
+            concern: 'T존(이마, 코)은 번들거리는데 볼 주변은 건조하고 각질이 조금 일어나요.',
+            products: '약산성 폼클렌저, 수분 크림',
+            aiResponse: '복합성 피부는 부위별 유수분 균형을 맞추는 것이 핵심이에요!\n\n[아침 스킨케어 순서]\n1. 미온수 가벼운 세안 (T존 위주 소량 클렌저)\n2. 수분 진정 토너 (화장솜으로 T존 가볍게 정돈)\n3. 산뜻한 수분 로션 전체 도포\n4. 무기자차 또는 산뜻한 선크림\n\n[저녁 스킨케어 순서]\n1. 약산성 폼클렌저로 꼼꼼히 세안\n2. 수분 토너 2회 레이어링\n3. 볼 부위에만 보습 크림 한 겹 더 덧바르기\n\n[추천 성분 팁]\n판테놀, 히알루론산이 들어간 산뜻한 젤 크림을 선택해 보세요.'
+          }
+        ],
+        health: [
+          {
+            id: 'sample-health-1',
+            isSample: true,
+            date: '2026-11-11 21:00',
+            breakfast: '토스트 1조각, 우유 1잔',
+            lunch: '학교 급식(현미밥, 된장찌개, 제육볶음, 시금치나물)',
+            dinner: '연어 덮밥, 미소된장국',
+            snack: '사과 반 쪽, 물 6잔',
+            sleep: 7.5,
+            activity: '가벼운 스트레칭/걷기',
+            weight: '',
+            aiResponse: '세 끼 식사를 규칙적으로 챙겨 드셨네요! 특히 점심과 저녁에 단백질(제육, 연어)과 채소가 고루 포함되어 있어 성장기 영양 균형이 아주 좋습니다.\n\n[개선 제안]\n• 아침에 삶은 달걀이나 견과류를 조금 곁들이면 오전 수업 집중력이 더욱 높아질 거예요.\n• 추천 활동: 공부 중간 쉬는 시간에 5분씩 어깨와 목 스트레칭을 해보세요!'
+          }
+        ],
+        counsel: [
+          {
+            id: 'sample-counsel-1',
+            isSample: true,
+            date: '2026-11-09 19:40',
+            category: '진로·적성',
+            content: '좋아하는 건 많은데 막상 장래희망을 하나로 정하려고 하니 너무 막막해요.',
+            aiResponse: '좋아하는 것이 많다는 건 그만큼 호기심이 풍부하고 가능성이 넓다는 멋진 장점이에요!\n\n[다양한 관점으로 보기]\n중·고등학생 시기의 진로는 "평생 할 직업 하나를 확정하는 것"이 아니라 "내가 무엇을 할 때 즐거운지 탐색하는 과정"이에요.\n\n[현실적 해결 방법]\n1. 좋아하는 활동 3가지를 적고 공통점(예: 사람 돕기, 만들기, 분석하기)을 찾아보세요.\n2. 관련 분야의 청소년 진로 체험 프로그램이나 직무 인터뷰 영상을 가볍게 찾아보세요.',
+            actionPlan: '이번 주말에 내가 좋아하는 활동 3가지 노트에 적어보기'
+          }
+        ]
+      };
+    }
+
+    /**
+     * 페이지 로드 시 초기화
+     */
+    window.addEventListener('DOMContentLoaded', () => {
+      loadFromStorage();
+      setupInteractiveSelectors();
+      setupFormHandlers();
+
+      if (!userProfile || !userProfile.name) {
+        showOnboarding();
+      } else {
+        showMainApp();
+      }
+    });
+
+    /**
+     * 로컬 스토리지에서 프로필 및 기록 불러오기
+     */
+    function loadFromStorage() {
+      try {
+        const savedProfile = localStorage.getItem(STORAGE_KEYS.PROFILE);
+        userProfile = savedProfile ? JSON.parse(savedProfile) : null;
+
+        const samples = getDefaultSamples();
+        ['mind', 'skin', 'health', 'counsel'].forEach(key => {
+          const raw = localStorage.getItem(STORAGE_KEYS[key.toUpperCase()]);
+          if (raw === null) {
+            records[key] = samples[key];
+            localStorage.setItem(STORAGE_KEYS[key.toUpperCase()], JSON.stringify(records[key]));
+          } else {
+            records[key] = JSON.parse(raw);
+          }
+        });
+      } catch (e) {
+        console.error('스토리지 로드 오류:', e);
+        showToast('저장된 데이터를 불러오는 중 문제가 발생했습니다.', 'error');
+      }
+    }
+
+    /**
+     * 특정 카테고리의 기록을 로컬 스토리지에 저장하고 UI 갱신
+     */
+    function saveCategoryRecords(category) {
+      try {
+        localStorage.setItem(STORAGE_KEYS[category.toUpperCase()], JSON.stringify(records[category]));
+        updateDashboardCounts();
+        renderCategoryHistory(category);
+      } catch (e) {
+        showToast('저장 공간이 부족하거나 저장에 실패했습니다.', 'error');
+      }
+    }
+
+    /**
+     * 예시 데이터 다시 불러오기
+     */
+    function resetSampleData() {
+      const samples = getDefaultSamples();
+      ['mind', 'skin', 'health', 'counsel'].forEach(key => {
+        const existingNonSamples = records[key].filter(item => !item.isSample);
+        records[key] = [...existingNonSamples, ...samples[key]];
+        localStorage.setItem(STORAGE_KEYS[key.toUpperCase()], JSON.stringify(records[key]));
+      });
+      updateDashboardCounts();
+      showToast('예시 데이터가 다시 추가되었습니다 🌸', 'success');
+    }
+
+    /**
+     * 온보딩(초기 설정) 화면 표시
+     */
+    function showOnboarding() {
+      document.getElementById('onboarding-screen').classList.remove('hidden');
+      document.getElementById('app-shell').classList.add('hidden');
+
+      if (userProfile) {
+        document.getElementById('user-name').value = userProfile.name || '';
+        document.getElementById('user-role').value = userProfile.role || '';
+        document.querySelectorAll('.role-btn').forEach(btn => {
+          if (btn.dataset.role === userProfile.role) {
+            btn.classList.add('bg-pastelLavender', 'border-deepLavender', 'text-deepLavender', 'font-bold');
+          } else {
+            btn.classList.remove('bg-pastelLavender', 'border-deepLavender', 'text-deepLavender', 'font-bold');
+          }
+        });
+        document.querySelectorAll('.concern-checkbox').forEach(cb => {
+          const checked = (userProfile.concerns || []).includes(cb.value);
+          cb.checked = checked;
+          updateConcernChipStyle(cb);
+        });
+      }
+    }
+
+    function openProfileEdit() {
+      showOnboarding();
+    }
+
+    /**
+     * 메인 앱 화면 표시 및 사용자 맞춤 UI 업데이트
+     */
+    function showMainApp() {
+      document.getElementById('onboarding-screen').classList.add('hidden');
+      document.getElementById('app-shell').classList.remove('hidden');
+
+      document.getElementById('header-user-info').textContent = `${userProfile.name} (${userProfile.role})`;
+      document.getElementById('welcome-user-greeting').textContent = `${userProfile.name}님(${userProfile.role}), 오늘도 소중한 하루예요!`;
+
+      const tagsContainer = document.getElementById('user-focus-tags');
+      tagsContainer.innerHTML = '';
+      (userProfile.concerns || []).forEach(c => {
+        const span = document.createElement('span');
+        span.className = 'px-3 py-1 rounded-full bg-white/90 border border-pastelLavender text-deepLavender text-xs font-bold';
+        span.textContent = `# ${c}`;
+        tagsContainer.appendChild(span);
+      });
+
+      updateDashboardCounts();
+      navigateTo('home');
+    }
+
+    /**
+     * 화면 전환 네비게이션
+     */
+    function navigateTo(viewName) {
+      ['home', 'mind', 'skin', 'health', 'counsel'].forEach(v => {
+        const el = document.getElementById(`view-${v}`);
+        if (el) el.classList.add('hidden');
+      });
+      const target = document.getElementById(`view-${viewName}`);
+      if (target) {
+        target.classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      if (viewName !== 'home') {
+        renderCategoryHistory(viewName);
+      }
+    }
+
+    function updateDashboardCounts() {
+      document.getElementById('count-mind').textContent = `기록 ${records.mind.length}개`;
+      document.getElementById('count-skin').textContent = `기록 ${records.skin.length}개`;
+      document.getElementById('count-health').textContent = `기록 ${records.health.length}개`;
+      document.getElementById('count-counsel').textContent = `기록 ${records.counsel.length}개`;
+    }
+
+    /**
+     * 각종 선택 버튼 인터랙션 세팅
+     */
+    function setupInteractiveSelectors() {
+      // 온보딩 신분 선택
+      document.querySelectorAll('.role-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('bg-pastelLavender', 'border-deepLavender', 'text-deepLavender', 'font-bold'));
+          btn.classList.add('bg-pastelLavender', 'border-deepLavender', 'text-deepLavender', 'font-bold');
+          document.getElementById('user-role').value = btn.dataset.role;
+        });
+      });
+
+      // 온보딩 고민 중복 선택
+      document.querySelectorAll('.concern-checkbox').forEach(cb => {
+        cb.addEventListener('change', () => updateConcernChipStyle(cb));
+      });
+
+      // 마음 돌봄 감정 버튼
+      document.querySelectorAll('.emotion-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.emotion-btn').forEach(b => b.classList.remove('bg-pastelPink', 'border-deepPink', 'ring-2', 'ring-softPink'));
+          btn.classList.add('bg-pastelPink', 'border-deepPink', 'ring-2', 'ring-softPink');
+          document.getElementById('mind-emotion').value = btn.dataset.emotion;
+          document.getElementById('mind-valence').value = btn.dataset.valence;
+        });
+      });
+
+      // 피부 유형 버튼
+      document.querySelectorAll('.skintype-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.skintype-btn').forEach(b => b.classList.remove('bg-pastelLavender', 'border-deepLavender', 'text-deepLavender'));
+          btn.classList.add('bg-pastelLavender', 'border-deepLavender', 'text-deepLavender');
+          document.getElementById('skin-type').value = btn.dataset.skintype;
+        });
+      });
+
+      // 피부 컨디션 점수 버튼
+      document.querySelectorAll('.skinscore-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.skinscore-btn').forEach(b => b.classList.remove('bg-pastelLavender', 'border-deepLavender', 'text-deepLavender'));
+          btn.classList.add('bg-pastelLavender', 'border-deepLavender', 'text-deepLavender');
+          document.getElementById('skin-score').value = btn.dataset.score;
+        });
+      });
+
+      // 피부 사진 미리보기 (개인 기록용)
+      document.getElementById('skin-photo').addEventListener('change', (e) => {
+        const file = e.target.files?.[0];
+        const wrap = document.getElementById('skin-photo-preview-wrap');
+        const img = document.getElementById('skin-photo-preview');
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            img.src = ev.target.result;
+            wrap.classList.remove('hidden');
+          };
+          reader.readAsDataURL(file);
+        } else {
+          wrap.classList.add('hidden');
+        }
+      });
+
+      // 고민 상담 카테고리 버튼
+      document.querySelectorAll('.counselcat-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.counselcat-btn').forEach(b => b.classList.remove('bg-teal-100', 'border-teal-500', 'text-teal-900'));
+          btn.classList.add('bg-teal-100', 'border-teal-500', 'text-teal-900');
+          document.getElementById('counsel-category').value = btn.dataset.cat;
+        });
+      });
+    }
+
+    function updateConcernChipStyle(checkbox) {
+      const label = checkbox.closest('.concern-chip');
+      if (checkbox.checked) {
+        label.classList.add('bg-pastelPink/60', 'border-deepPink', 'ring-2', 'ring-softPink');
+        label.classList.remove('bg-white');
+      } else {
+        label.classList.remove('bg-pastelPink/60', 'border-deepPink', 'ring-2', 'ring-softPink');
+        label.classList.add('bg-white');
+      }
+    }
+
+    /**
+     * Gemini API 호출 (지수 백오프 적용) + 실패 시 상황별 스마트 동적 폴백
+     */
+    async function callGeminiAI(systemInstruction, userPrompt, fallbackGenerator) {
+      const payload = {
+        contents: [{ parts: [{ text: userPrompt }] }],
+        systemInstruction: { parts: [{ text: systemInstruction }] }
+      };
+
+      const delays = [1000, 2000, 4000];
+      for (let attempt = 0; attempt <= delays.length; attempt++) {
+        try {
+          const response = await fetch(GEMINI_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          const data = await response.json();
+          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text && text.trim().length > 0) {
+            return text.trim();
+          }
+          throw new Error('Empty response');
+        } catch (err) {
+          if (attempt < delays.length) {
+            await new Promise(res => setTimeout(res, delays[attempt]));
+          } else {
+            // API 연결 불가 시 입력 데이터 기반 동적 맞춤형 폴백 실행
+            return fallbackGenerator();
+          }
+        }
+      }
+    }
+
+    /**
+     * 폼 제출 이벤트 핸들러 등록
+     */
+    function setupFormHandlers() {
+      // 1. 온보딩 폼
+      document.getElementById('onboarding-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = document.getElementById('user-name').value.trim();
+        const role = document.getElementById('user-role').value;
+        const concerns = Array.from(document.querySelectorAll('.concern-checkbox:checked')).map(cb => cb.value);
+
+        if (!name) {
+          showToast('이름 또는 닉네임을 입력해 주세요!', 'error');
+          document.getElementById('user-name').focus();
+          return;
+        }
+        if (!role) {
+          showToast('현재 나이/신분을 선택해 주세요!', 'error');
+          return;
+        }
+        if (concerns.length === 0) {
+          showToast('관심 있는 고민 분야를 1개 이상 선택해 주세요!', 'error');
+          return;
+        }
+
+        userProfile = { name, role, concerns };
+        localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(userProfile));
+        showToast(`${name}님, 환영해요! 맞춤 설정이 완료되었어요 🌸`, 'success');
+        showMainApp();
+      });
+
+      // 2. 마음 돌봄 폼
+      document.getElementById('mind-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const emotion = document.getElementById('mind-emotion').value;
+        const valence = document.getElementById('mind-valence').value;
+        const content = document.getElementById('mind-content').value.trim();
+
+        if (!emotion) {
+          showToast('지금 느끼는 감정 아이콘을 먼저 선택해 주세요!', 'error');
+          return;
+        }
+        if (!content) {
+          showToast('오늘 있었던 일이나 마음속 이야기를 적어주세요!', 'error');
+          document.getElementById('mind-content').focus();
+          return;
+        }
+
+        const btn = document.getElementById('mind-submit-btn');
+        setLoading(btn, true, 'AI가 마음을 읽고 답장을 쓰고 있어요...');
+
+        const systemPrompt = `당신은 'MINDLY'의 따뜻하고 섬세한 AI 마음 친구입니다. 사용자 정보: 이름=${userProfile.name}, 신분=${userProfile.role}.
+[핵심 규칙]
+1. 사용자가 '긍정적 감정(행복해요, 뿌듯해요, 설레요 등)'을 선택했거나 긍정적인 이야기를 적었다면, 절대 억지로 문제 해결책이나 솔루션을 제시하지 마세요! 오직 그 기쁨과 설렘에 진심으로 함께 기뻐해주고, 긍정적인 에너지를 응원하며 따뜻하게 공감하는 메시지만 작성하세요.
+2. 사용자가 '부정적 감정(우울해요, 불안·스트레스, 화나고 답답해요 등)'을 선택했을 때만, 감정을 섣불리 판단하지 않고 깊이 공감해 준 뒤, 지금 당장 해볼 수 있는 작고 현실적인 대처 방법 2가지를 부드럽게 제안하세요.
+3. 의학적 진단이나 치료 표현은 절대 쓰지 마세요. 매번 사용자 글의 구체적 단어를 언급하며 완전히 새로운 답장을 쓰세요.`;
+
+        const userPrompt = `선택한 감정: ${emotion} (${valence === 'positive' ? '긍정적 감정' : '부정적/힘든 감정'})\n작성 내용: "${content}"`;
+
+        const aiText = await callGeminiAI(systemPrompt, userPrompt, () => {
+          return generateDynamicMindFallback(userProfile.name, emotion, valence, content);
+        });
+
+        const newRecord = {
+          id: 'mind-' + Date.now(),
+          isSample: false,
+          date: formatNow(),
+          emotion,
+          valence,
+          content,
+          aiResponse: aiText
+        };
+
+        records.mind.unshift(newRecord);
+        saveCategoryRecords('mind');
+
+        document.getElementById('mind-ai-text').textContent = aiText;
+        const helpNotice = document.getElementById('mind-help-notice');
+        if (valence === 'negative') {
+          helpNotice.classList.remove('hidden');
+        } else {
+          helpNotice.classList.add('hidden');
+        }
+        document.getElementById('mind-ai-result').classList.remove('hidden');
+        document.getElementById('mind-content').value = '';
+        setLoading(btn, false, 'AI 마음 공감 받기 & 기록 저장');
+        showToast('마음 기록이 저장되었어요 💗', 'success');
+      });
+
+      // 3. 피부 관리 폼
+      document.getElementById('skin-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const skinType = document.getElementById('skin-type').value;
+        const score = parseInt(document.getElementById('skin-score').value || '0', 10);
+        const concern = document.getElementById('skin-concern').value.trim();
+        const products = document.getElementById('skin-products').value.trim() || '따로 입력하지 않음';
+
+        if (!skinType) {
+          showToast('나의 피부 유형(지성, 건성, 복합성 등)을 선택해 주세요!', 'error');
+          return;
+        }
+        if (!score) {
+          showToast('오늘 느끼는 피부 컨디션 점수를 선택해 주세요!', 'error');
+          return;
+        }
+        if (!concern) {
+          showToast('구체적인 피부 고민을 입력해 주세요!', 'error');
+          document.getElementById('skin-concern').focus();
+          return;
+        }
+
+        // 이전 피부 기록과 비교하여 상태가 나아졌는지 확인
+        const prevRecord = records.skin[0];
+        const isImproved = prevRecord && score > prevRecord.score;
+
+        const btn = document.getElementById('skin-submit-btn');
+        setLoading(btn, true, '피부 타입에 맞는 루틴을 분석하고 있어요...');
+
+        const systemPrompt = `당신은 'MINDLY'의 다정한 AI 스킨케어 가이드입니다. 사용자: ${userProfile.name} (${userProfile.role}).
+[핵심 규칙]
+1. 입력된 피부 유형(${skinType})과 구체적 고민에 따라 아침 스킨케어 순서, 저녁 스킨케어 순서, 추천 성분/화장품 선택 기준을 구체적이고 차별화되게 안내하세요.
+2. ${isImproved ? '중요: 이전 기록보다 피부 점수가 좋아졌습니다! 답변 첫머리에 반드시 "오, 전보다 더 나아졌네요! 정말 잘 관리하고 있어요 👏"라는 칭찬 멘트를 포함해 격려해 주세요.' : '현재 피부 상태에 맞춘 세심한 관리 팁을 제공하세요.'}
+3. 피부 질환을 확정적으로 진단하지 말고, 화장품 정보는 참고용임을 자연스럽게 반영하세요.`;
+
+        const userPrompt = `피부 유형: ${skinType}\n오늘 피부 컨디션 점수: ${score}/5점 ${prevRecord ? `(이전 기록: ${prevRecord.score}/5점)` : '(첫 기록)'}\n피부 고민: ${concern}\n현재 사용 제품: ${products}`;
+
+        const aiText = await callGeminiAI(systemPrompt, userPrompt, () => {
+          return generateDynamicSkinFallback(userProfile.name, skinType, score, concern, products, isImproved);
+        });
+
+        const newRecord = {
+          id: 'skin-' + Date.now(),
+          isSample: false,
+          date: formatNow(),
+          skinType,
+          score,
+          concern,
+          products,
+          aiResponse: aiText
+        };
+
+        records.skin.unshift(newRecord);
+        saveCategoryRecords('skin');
+
+        document.getElementById('skin-ai-text').textContent = aiText;
+        document.getElementById('skin-ai-result').classList.remove('hidden');
+        document.getElementById('skin-concern').value = '';
+        setLoading(btn, false, '맞춤 스킨케어 루틴 추천받기 ✨');
+        showToast('피부 관리 루틴이 생성·저장되었어요 ✨', 'success');
+      });
+
+      // 4. 건강한 생활 폼
+      document.getElementById('health-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const breakfast = document.getElementById('meal-breakfast').value.trim();
+        const lunch = document.getElementById('meal-lunch').value.trim();
+        const dinner = document.getElementById('meal-dinner').value.trim();
+        const snack = document.getElementById('meal-snack').value.trim();
+        const sleep = parseFloat(document.getElementById('health-sleep').value || '0');
+        const activity = document.getElementById('health-activity').value;
+        const weight = document.getElementById('health-weight').value.trim();
+
+        if (!breakfast && !lunch && !dinner) {
+          showToast('아침, 점심, 저녁 중 최소 한 끼 이상의 식단을 입력해 주세요!', 'error');
+          return;
+        }
+        if (!sleep || sleep <= 0) {
+          showToast('어젯밤 수면 시간을 입력해 주세요!', 'error');
+          document.getElementById('health-sleep').focus();
+          return;
+        }
+        if (!activity) {
+          showToast('오늘의 활동/컨디션 수준을 선택해 주세요!', 'error');
+          return;
+        }
+
+        // 이전 기록 대비 생활 습관 개선 여부 체크 (수면 7시간 이상 달성 또는 활동량 증가 등)
+        const prevHealth = records.health[0];
+        const mealsCount = [breakfast, lunch, dinner].filter(m => m && !m.includes('거름') && !m.includes('안먹')).length;
+        const isImproved = (prevHealth && sleep > prevHealth.sleep && sleep >= 7) || (mealsCount === 3 && sleep >= 7);
+
+        const btn = document.getElementById('health-submit-btn');
+        setLoading(btn, true, '식단과 생활 리듬을 분석하고 있어요...');
+
+        const systemPrompt = `당신은 'MINDLY'의 따뜻한 AI 건강 생활 코치입니다. 사용자: ${userProfile.name} (${userProfile.role}).
+[핵심 규칙]
+1. 성장기 청소년 및 학생을 고려해 무리한 체중 감량, 단식, 과도한 운동을 절대 권장하지 마세요! 균형 잡힌 3대 영양소 섭취와 규칙적인 생활 습관을 중심으로 안내하세요.
+2. ${isImproved ? '중요: 이전보다 수면이나 식사 균형이 좋아졌습니다! 답변 첫머리에 반드시 "오, 전보다 더 나아졌네요! 건강한 리듬을 아주 잘 만들어가고 있어요 👏"라는 칭찬 멘트를 넣어주세요.' : '오늘 식단과 수면에서 잘한 점을 먼저 칭찬하고, 보완할 영양소와 가벼운 신체 활동을 추천해 주세요.'}
+3. 입력된 구체적 음식 메뉴와 수면 시간을 직접 언급하며 맞춤형 피드백을 작성하세요.`;
+
+        const userPrompt = `아침: ${breakfast || '미입력'}\n점심: ${lunch || '미입력'}\n저녁: ${dinner || '미입력'}\n간식/수분: ${snack || '미입력'}\n수면 시간: ${sleep}시간\n활동 수준: ${activity}${weight ? `\n기록 체중: ${weight}kg` : ''}`;
+
+        const aiText = await callGeminiAI(systemPrompt, userPrompt, () => {
+          return generateDynamicHealthFallback(userProfile.name, userProfile.role, { breakfast, lunch, dinner, snack, sleep, activity }, isImproved);
+        });
+
+        const newRecord = {
+          id: 'health-' + Date.now(),
+          isSample: false,
+          date: formatNow(),
+          breakfast: breakfast || '기록 없음',
+          lunch: lunch || '기록 없음',
+          dinner: dinner || '기록 없음',
+          snack: snack || '기록 없음',
+          sleep,
+          activity,
+          weight,
+          aiResponse: aiText
+        };
+
+        records.health.unshift(newRecord);
+        saveCategoryRecords('health');
+
+        document.getElementById('health-ai-text').textContent = aiText;
+        document.getElementById('health-ai-result').classList.remove('hidden');
+        setLoading(btn, false, '식단 & 생활 습관 AI 피드백 받기 🌿');
+        showToast('건강한 생활 기록이 저장되었어요 🥗', 'success');
+      });
+
+      // 5. 고민 상담 폼
+      document.getElementById('counsel-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const category = document.getElementById('counsel-category').value;
+        const content = document.getElementById('counsel-content').value.trim();
+
+        if (!category) {
+          showToast('고민 분야(친구 관계, 진로 등)를 선택해 주세요!', 'error');
+          return;
+        }
+        if (!content) {
+          showToast('고민 내용을 구체적으로 적어주세요!', 'error');
+          document.getElementById('counsel-content').focus();
+          return;
+        }
+
+        const btn = document.getElementById('counsel-submit-btn');
+        setLoading(btn, true, '고민을 여러 관점에서 깊이 살펴보고 있어요...');
+
+        const systemPrompt = `당신은 'MINDLY'의 지혜롭고 따뜻한 AI 고민 상담 멘토입니다. 사용자: ${userProfile.name} (${userProfile.role}).
+[핵심 규칙]
+반드시 다음 3가지 구조로 구체적이고 현실적인 맞춤 조언을 작성하세요 (사용자가 적은 상황의 핵심 키워드를 직접 인용):
+1. [마음 공감] 사용자의 상황과 감정을 따뜻하게 인정하고 공감하기
+2. [다른 관점으로 보기] 이 상황을 조금 더 넓거나 새로운 시선으로 바라보는 방법
+3. [현실적인 해결 제안] 오늘 또는 이번 주에 부담 없이 시도할 수 있는 구체적 행동 2가지`;
+
+        const userPrompt = `고민 분야: ${category}\n고민 내용: "${content}"`;
+
+        const aiText = await callGeminiAI(systemPrompt, userPrompt, () => {
+          return generateDynamicCounselFallback(userProfile.name, userProfile.role, category, content);
+        });
+
+        const newId = 'counsel-' + Date.now();
+        latestCounselId = newId;
+
+        const newRecord = {
+          id: newId,
+          isSample: false,
+          date: formatNow(),
+          category,
+          content,
+          aiResponse: aiText,
+          actionPlan: ''
+        };
+
+        records.counsel.unshift(newRecord);
+        saveCategoryRecords('counsel');
+
+        document.getElementById('counsel-ai-text').textContent = aiText;
+        document.getElementById('counsel-action-plan').value = '';
+        document.getElementById('counsel-ai-result').classList.remove('hidden');
+        document.getElementById('counsel-content').value = '';
+        setLoading(btn, false, 'AI 관점 분석 & 해결 방법 제안받기 💬');
+        showToast('고민 상담 리포트가 생성되었어요 💌', 'success');
+      });
+    }
+
+    /**
+     * 상담 후 사용자가 작성한 실천 계획 저장
+     */
+    function saveActionPlanToLatestCounsel() {
+      const plan = document.getElementById('counsel-action-plan').value.trim();
+      if (!plan) {
+        showToast('나만의 작은 실천 계획을 입력해 주세요!', 'error');
+        return;
+      }
+      if (records.counsel.length > 0) {
+        const target = records.counsel.find(r => r.id === latestCounselId) || records.counsel[0];
+        target.actionPlan = plan;
+        saveCategoryRecords('counsel');
+        showToast('나의 실천 계획이 기록에 저장되었어요! 응원합니다 👏', 'success');
+      }
+    }
+
+    /**
+     * =========================================================================
+     * 스마트 동적 폴백(Fallback) 생성기: API 오프라인 시에도 입력 내용에 따라 매번 다르게 생성
+     * =========================================================================
+     */
+    function generateDynamicMindFallback(name, emotion, valence, content) {
+      const snippet = content.length > 28 ? content.slice(0, 28) + '...' : content;
+      if (valence === 'positive') {
+        const cheers = [
+          `${name}님! "${snippet}" 이야기를 읽으니 저까지 마음이 환해지고 미소가 지어져요! 😊\n\n지금 느끼는 '${emotion}'이라는 기분은 ${name}님이 오늘 하루를 온전히 누리고 있다는 멋진 증거예요. 억지로 무언가를 더 하려 하지 말고, 오늘의 이 기분 좋은 설렘과 행복을 마음껏 만끽하세요. 언제나 ${name}님의 빛나는 순간들을 진심으로 응원할게요! ✨🌷`,
+          `와, 정말 기분 좋은 소식이네요 ${name}님! "${snippet}" 덕분에 오늘 하루가 특별하게 기억될 것 같아요. 🥳\n\n긍정적인 에너지는 나눌수록 더 커진다고 하죠. 오늘 느낀 이 따뜻하고 벅찬 마음을 오래오래 간직하시고, 스스로에게 "오늘 참 멋졌어!"라고 한마디 건네주세요! 💖`
+        ];
+        return cheers[content.length % cheers.length];
+      } else {
+        let specificTip = '잠시 하던 일을 멈추고 창밖을 보며 3번 깊게 심호흡해 보세요.';
+        if (content.includes('친구') || content.includes('관계') || content.includes('오해')) {
+          specificTip = '상대방의 마음을 미리 추측하기보다, 내 마음이 왜 서운했는지 짧은 메모로 먼저 정리해 보세요.';
+        } else if (content.includes('시험') || content.includes('공부') || content.includes('성적') || content.includes('수행')) {
+          specificTip = '완벽하게 다 해내려는 부담을 잠시 내려놓고, 지금 당장 15분만 집중할 가장 작은 목표 하나만 골라보세요.';
+        } else if (content.includes('피곤') || content.includes('잠') || content.includes('지치')) {
+          specificTip = '오늘은 스마트폰을 조금 일찍 내려놓고 따뜻한 물로 샤워한 뒤 충분한 휴식을 선물해 주세요.';
+        }
+        return `${name}님, "${snippet}" 일로 마음이 많이 '${emotion}' 상태였군요. 혼자서 그 감정을 꾹 눌러 담느라 참 애썼어요.\n\n[마음을 다독이는 작은 대처 방법]\n1. 지금 느끼는 감정은 자연스러운 반응이니 스스로를 탓하지 말고 "그럴 수 있어"라고 토닥여 주세요.\n2. ${specificTip}\n\n혼자 감당하기 버거울 때는 믿을 수 있는 부모님이나 선생님, 학교 상담실에 마음을 나누어 보세요.`;
+      }
+    }
+
+    function generateDynamicSkinFallback(name, skinType, score, concern, products, isImproved) {
+      const praise = isImproved ? '오, 전보다 더 나아졌네요! 정말 잘 관리하고 있어요 👏\n\n' : '';
+      const routines = {
+        '지성': {
+          am: '1. 약산성 젤 클렌저로 밤사이 올라온 유분 가볍게 세안\n2. 수분 토너 (유분기가 적은 워터 타입)\n3. 오일프리 수분 젤 크림\n4. 번들거림이 적은 가벼운 선크림',
+          pm: '1. 꼼꼼한 약산성 폼클렌징 (T존 중심 부드럽게 롤링)\n2. 진정 수분 토너\n3. 논코메도제닉(모공을 막지 않는) 수분 로션',
+          tip: '유분을 없애려고 뽀드득하게 세안하면 오히려 피지가 더 분비돼요. 티트리, 병풀(시카), 나이아신아마이드 성분의 산뜻한 제품을 참고해 보세요.'
+        },
+        '건성': {
+          am: '1. 미온수로 가볍게 물세안 (당김이 심할 때만 소량 클렌저)\n2. 보습 토너 2회 흡수\n3. 세라마이드 보습 크림\n4. 촉촉한 에센스 타입 선크림',
+          pm: '1. 부드러운 밀크 또는 약산성 클렌저\n2. 히알루론산 고보습 토너\n3. 보습 로션 + 건조한 부위 크림 레이어링',
+          tip: '세안 후 3분 이내에 수분이 날아가기 전 보습제를 발라주는 것이 중요해요. 세라마이드, 판테놀, 시어버터 성분이 함유된 제품을 참고해 보세요.'
+        },
+        '복합성': {
+          am: '1. 미온수 세안 (이마·코 T존만 클렌저 소량 사용)\n2. 수분 밸런스 토너\n3. 산뜻한 로션 전체 도포\n4. 산뜻한 혼합자차 선크림',
+          pm: '1. 약산성 폼클렌저로 전체 세안\n2. 수분 진정 토너로 피부결 정돈\n3. T존은 얇게, 건조한 볼(U존)은 보습 크림 한 겹 더 바르기',
+          tip: '부위별로 유수분도가 다르므로 얼굴 전체에 똑같은 양을 바르기보다 부위별 양 조절을 해주세요. 판테놀, 베타글루칸 성분이 잘 맞습니다.'
+        },
+        '민감성': {
+          am: '1. 미온수로 자극 없이 부드럽게 물세안\n2. 무향·저자극 진정 토너 (손바닥으로 지그시 흡수)\n3. 장벽 보호 진정 크림\n4. 순한 무기자차 선크림',
+          pm: '1. 저자극 약산성 클렌저로 30초 이내 짧은 세안\n2. 시카/어성초 진정 토너\n3. 피부 장벽 크림 듬뿍 도포',
+          tip: '각질 제거제나 새로운 화장품을 한꺼번에 여러 개 쓰는 것을 피해 주세요. 병풀추출물, 마데카소사이드, 알란토인 성분의 순한 제품을 권장합니다.'
+        },
+        '중성': {
+          am: '1. 가벼운 미온수 또는 약산성 세안\n2. 수분 토너\n3. 밸런싱 수분 로션\n4. 데일리 선크림 (외출 필수)',
+          pm: '1. 약산성 클렌저로 노폐물 세안\n2. 수분 토너\n3. 수분·보습 크림으로 유수분 균형 유지',
+          tip: '타고난 좋은 피부 균형을 유지하는 것이 핵심이에요! 계절이 바뀔 때만 보습감을 조금씩 조절해 주시고 자외선 차단을 꼼꼼히 해주세요.'
+        }
+      };
+
+      const selected = routines[skinType] || routines['중성'];
+      return `${praise}${name}님의 [${skinType}] 피부와 "${concern}" 고민에 맞춘 스킨케어 가이드예요!\n(현재 사용 중인 제품: ${products})\n\n[☀️ 아침 스킨케어 순서]\n${selected.am}\n\n[🌙 저녁 스킨케어 순서]\n${selected.pm}\n\n[💡 성분 및 제품 선택 팁]\n${selected.tip}`;
+    }
+
+    function generateDynamicHealthFallback(name, role, data, isImproved) {
+      const praise = isImproved ? '오, 전보다 더 나아졌네요! 건강한 리듬을 아주 잘 만들어가고 있어요 👏\n\n' : '';
+      let feedback = [];
+      if (!data.breakfast || data.breakfast.includes('거름')) {
+        feedback.push('• 아침 식사를 거르면 오전 활동 중 에너지가 부족할 수 있어요. 바나나, 우유, 삶은 달걀처럼 간단하게라도 챙겨 먹어 보세요.');
+      } else {
+        feedback.push(`• 아침(${data.breakfast})을 챙겨 드신 점이 정말 훌륭해요! 하루를 시작하는 든든한 에너지원이 되었을 거예요.`);
+      }
+
+      if (data.sleep < 7) {
+        feedback.push(`• 수면 시간이 ${data.sleep}시간으로 조금 부족해요. ${role} 시기에는 집중력과 컨디션 회복을 위해 최소 7~8시간 수면을 목표로 해보세요.`);
+      } else {
+        feedback.push(`• ${data.sleep}시간의 충분한 수면을 취하셨네요! 규칙적인 취침·기상 시간이 최고의 보약입니다.`);
+      }
+
+      const activityTip = data.activity.includes('앉아서')
+        ? '오늘 앉아 있는 시간이 길었으니, 자기 전 10분간 전신 스트레칭이나 가벼운 제자리 걷기로 몸을 풀어주세요.'
+        : '오늘도 몸을 활기차게 움직이셨네요! 운동 후에는 수분과 단백질을 충분히 보충해 주세요.';
+
+      return `${praise}${name}님의 오늘 식단과 생활 습관 분석 결과입니다!\n\n[🍽️ 식단 & 수면 피드백]\n${feedback.join('\n')}\n\n[🏃 ${role} 맞춤 신체 활동 추천]\n• ${activityTip}\n• 성장과 건강을 위해 식사량을 무리하게 줄이지 말고, 채소와 단백질 반찬을 골고루 즐겁게 섭취하세요!`;
+    }
+
+    function generateDynamicCounselFallback(name, role, category, content) {
+      const snippet = content.length > 30 ? content.slice(0, 30) + '...' : content;
+      const categoryAdvice = {
+        '친구 관계': {
+          perspective: '친구 사이에서도 각자의 컨디션이나 표현 방식이 달라서 본의 아니게 오해가 생길 때가 많아요. 내 잘못이라기보다 서로 맞춰가는 과정일 수 있어요.',
+          actions: '1. 오늘 친구의 좋은 점 한 가지를 떠올리며 먼저 가볍게 인사나 질문 건네보기\n2. 서운한 마음이 크다면 비난 대신 "나는 ~할 때 조금 서운했어"라는 나-전달법(I-Message)으로 대화해 보기'
+        },
+        '진로·적성': {
+          perspective: `${role} 시기의 진로 고민은 답을 딱 정하는 시험이 아니라, 여러 가지 흥미로운 지도를 펼쳐보는 즐거운 탐색의 시간이에요.`,
+          actions: '1. 평소에 시간 가는 줄 모르고 몰입했던 활동 2가지 적어보기\n2. 관심 있는 분야의 책, 유튜브 진로 인터뷰 영상 1편 가볍게 찾아보기'
+        },
+        '학업·성적': {
+          perspective: '성적은 지금 내 노력의 방향을 점검해 주는 이정표일 뿐, 내 가치 전체를 결정하지 않아요. 조금 느리더라도 나만의 속도를 찾는 것이 중요해요.',
+          actions: '1. 오늘 틀린 문제나 이해 안 된 개념 딱 3개만 노트에 정리해 보기\n2. 책상 위 스마트폰을 다른 방에 두고 25분 집중 + 5분 휴식 타이머 실천하기'
+        },
+        '가족 관계': {
+          perspective: '가족은 가장 가까운 사이인 만큼 서로 기대하는 바가 커서 표현이 서툴러질 때가 있어요. 부모님이나 가족도 내 마음을 다 알지 못할 수 있답니다.',
+          actions: '1. 식사 시간이나 이동 중에 오늘 학교에서 있었던 소소한 이야기 하나 들려드리기\n2. 내 생각과 원하는 바를 차분한 목소리로 미리 메모해 전달해 보기'
+        },
+        '학교생활·기타': {
+          perspective: '새로운 환경이나 반복되는 학교생활 속에서 누구나 크고 작은 부담을 느껴요. 지금 고민을 글로 적어본 것만으로도 이미 해결의 반은 시작되었어요.',
+          actions: '1. 학교생활 중 내가 기분 좋아지는 나만의 휴식 루틴(좋아하는 노래 듣기 등) 만들기\n2. 혼자 해결하기 어려운 일은 담임선생님이나 상담선생님께 조언 구하기'
+        }
+      };
+
+      const guide = categoryAdvice[category] || categoryAdvice['학교생활·기타'];
+      return `${name}님의 [${category}] 고민을 함께 읽어보았어요.\n\n1. [마음 공감]\n"${snippet}" 때문에 혼자서 신경 쓰이고 마음이 무거웠겠어요. 그만큼 상황을 잘 풀어가고 싶은 진심이 느껴집니다.\n\n2. [다른 관점으로 보기]\n${guide.perspective}\n\n3. [현실적인 해결 제안]\n${guide.actions}`;
+    }
+
+    /**
+     * =========================================================================
+     * 기록 렌더링 및 개별 삭제 / 전체 삭제 기능 (확실한 작동 보장)
+     * =========================================================================
+     */
+    function renderCategoryHistory(category) {
+      const container = document.getElementById(`${category}-history-list`);
+      if (!container) return;
+
+      const list = records[category] || [];
+      if (list.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-10 px-4 rounded-2xl bg-ivory/70 border border-dashed border-gray-200">
+            <p class="text-sm text-mutedText font-medium mb-1">아직 저장된 기록이 없어요 🌱</p>
+            <p class="text-xs text-mutedText/80">위 입력창에 오늘의 이야기를 남기면 이곳에 차곡차곡 쌓여요.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = list.map(item => {
+        const badgeHtml = item.isSample
+          ? `<span class="px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[11px] font-bold">예시 데이터</span>`
+          : `<span class="px-2.5 py-0.5 rounded-full bg-pastelPink text-deepPink text-[11px] font-bold">내 기록</span>`;
+
+        let bodyHtml = '';
+        if (category === 'mind') {
+          bodyHtml = `
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-2.5 py-0.5 rounded-xl bg-pastelPink/60 text-deepPink text-xs font-bold">${escapeHtml(item.emotion)}</span>
+            </div>
+            <p class="text-sm font-medium text-warmText mb-3 leading-relaxed">${escapeHtml(item.content)}</p>
+            <div class="p-3.5 rounded-2xl bg-ivory text-xs text-warmText leading-relaxed whitespace-pre-line border border-pastelPink/60">
+              <strong class="text-deepPink block mb-1">💌 MINDLY 답장:</strong>${escapeHtml(item.aiResponse)}
+            </div>
+          `;
+        } else if (category === 'skin') {
+          bodyHtml = `
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span class="px-2.5 py-0.5 rounded-xl bg-pastelLavender text-deepLavender text-xs font-bold">${escapeHtml(item.skinType)} 피부</span>
+              <span class="px-2.5 py-0.5 rounded-xl bg-purple-50 text-purple-700 text-xs font-bold">컨디션 ${item.score}/5점</span>
+            </div>
+            <p class="text-sm font-medium text-warmText mb-1"><strong>고민:</strong> ${escapeHtml(item.concern)}</p>
+            <p class="text-xs text-mutedText mb-3"><strong>사용 제품:</strong> ${escapeHtml(item.products)}</p>
+            <div class="p-3.5 rounded-2xl bg-ivory text-xs text-warmText leading-relaxed whitespace-pre-line border border-pastelLavender/70">
+              <strong class="text-deepLavender block mb-1">✨ 맞춤 케어 가이드:</strong>${escapeHtml(item.aiResponse)}
+            </div>
+          `;
+        } else if (category === 'health') {
+          bodyHtml = `
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span class="px-2.5 py-0.5 rounded-xl bg-amber-100 text-amber-800 text-xs font-bold">수면 ${item.sleep}시간</span>
+              <span class="px-2.5 py-0.5 rounded-xl bg-orange-50 text-orange-700 text-xs font-bold">${escapeHtml(item.activity)}</span>
+              ${item.weight ? `<span class="px-2.5 py-0.5 rounded-xl bg-gray-100 text-gray-700 text-xs font-bold">${escapeHtml(item.weight)}kg</span>` : ''}
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs text-warmText mb-3 bg-white/70 p-3 rounded-xl">
+              <div><strong>🌅 아침:</strong> ${escapeHtml(item.breakfast)}</div>
+              <div><strong>☀️ 점심:</strong> ${escapeHtml(item.lunch)}</div>
+              <div><strong>🌙 저녁:</strong> ${escapeHtml(item.dinner)}</div>
+              <div><strong>🍎 간식:</strong> ${escapeHtml(item.snack)}</div>
+            </div>
+            <div class="p-3.5 rounded-2xl bg-ivory text-xs text-warmText leading-relaxed whitespace-pre-line border border-amber-200/70">
+              <strong class="text-amber-700 block mb-1">🌿 건강 피드백:</strong>${escapeHtml(item.aiResponse)}
+            </div>
+          `;
+        } else if (category === 'counsel') {
+          bodyHtml = `
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-2.5 py-0.5 rounded-xl bg-teal-100 text-teal-800 text-xs font-bold">${escapeHtml(item.category)}</span>
+            </div>
+            <p class="text-sm font-medium text-warmText mb-3 leading-relaxed">${escapeHtml(item.content)}</p>
+            ${item.actionPlan ? `
+              <div class="mb-3 px-3.5 py-2.5 rounded-xl bg-teal-50 border border-teal-200 text-xs text-teal-900">
+                <strong>✅ 나의 실천 계획:</strong> ${escapeHtml(item.actionPlan)}
+              </div>
+            ` : ''}
+            <div class="p-3.5 rounded-2xl bg-ivory text-xs text-warmText leading-relaxed whitespace-pre-line border border-teal-200/70">
+              <strong class="text-teal-700 block mb-1">💬 상담 리포트:</strong>${escapeHtml(item.aiResponse)}
+            </div>
+          `;
+        }
+
+        return `
+          <article class="p-4 sm:p-5 rounded-3xl bg-white/90 border border-gray-100 shadow-2xs transition hover:shadow-sm">
+            <div class="flex items-center justify-between gap-2 mb-3 pb-2 border-b border-gray-100">
+              <div class="flex items-center gap-2">
+                ${badgeHtml}
+                <span class="text-xs text-mutedText">${escapeHtml(item.date)}</span>
+              </div>
+              <button type="button" onclick="confirmDeleteSingle('${category}', '${item.id}')"
+                class="px-2.5 py-1 rounded-lg bg-gray-50 hover:bg-rose-50 text-mutedText hover:text-rose-600 text-xs font-bold transition flex items-center gap-1"
+                title="이 기록 삭제">
+                <span>삭제</span>
+                <span>×</span>
+              </button>
+            </div>
+            ${bodyHtml}
+          </article>
+        `;
+      }).join('');
+    }
+
+    /**
+     * 개별 기록 삭제 확인 및 실행
+     */
+    function confirmDeleteSingle(category, id) {
+      openConfirmDialog(
+        '이 기록을 삭제할까요?',
+        '선택한 기록 1개가 목록과 저장소에서 즉시 삭제됩니다.',
+        () => {
+          records[category] = records[category].filter(item => item.id !== id);
+          saveCategoryRecords(category);
+          showToast('선택한 기록이 삭제되었습니다.', 'info');
+        }
+      );
+    }
+
+    /**
+     * 카테고리 전체 기록 삭제 확인 및 실행
+     */
+    function confirmDeleteAll(category) {
+      const names = { mind: '마음 돌봄', skin: '피부 관리', health: '건강한 생활', counsel: '고민 상담' };
+      if (!records[category] || records[category].length === 0) {
+        showToast('삭제할 기록이 이미 비어 있어요.', 'info');
+        return;
+      }
+      openConfirmDialog(
+        `${names[category]} 기록을 모두 삭제할까요?`,
+        `저장된 ${records[category].length}개의 기록이 모두 삭제되며 복구할 수 없습니다.`,
+        () => {
+          records[category] = [];
+          saveCategoryRecords(category);
+          showToast(`${names[category]} 기록이 전체 삭제되었습니다.`, 'info');
+        }
+      );
+    }
+
+    /**
+     * 커스텀 확인 모달 제어 (confirm() 대체)
+     */
+    function openConfirmDialog(title, message, onConfirm) {
+      const modal = document.getElementById('confirm-modal');
+      document.getElementById('confirm-title').textContent = title;
+      document.getElementById('confirm-message').textContent = message;
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+
+      const cancelBtn = document.getElementById('confirm-cancel-btn');
+      const okBtn = document.getElementById('confirm-ok-btn');
+
+      const cleanup = () => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        cancelBtn.onclick = null;
+        okBtn.onclick = null;
+      };
+
+      cancelBtn.onclick = cleanup;
+      okBtn.onclick = () => {
+        cleanup();
+        onConfirm();
+      };
+    }
+
+    /**
+     * 토스트 메시지 표시 (alert() 대체)
+     */
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const styles = {
+        success: 'bg-white border-deepPink text-warmText',
+        error: 'bg-rose-50 border-rose-400 text-rose-800',
+        info: 'bg-white border-deepLavender text-warmText'
+      };
+      const icons = { success: '🌷', error: '⚠️', info: '✨' };
+
+      toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-2xl border shadow-lg text-xs sm:text-sm font-semibold fade-in ${styles[type] || styles.info}`;
+      toast.innerHTML = `<span>${icons[type] || '✨'}</span><span>${escapeHtml(message)}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-6px)';
+        toast.style.transition = 'all 0.25s ease';
+        setTimeout(() => toast.remove(), 250);
+      }, 3000);
+    }
+
+    /**
+     * 유틸리티 함수들
+     */
+    function setLoading(btn, isLoading, text) {
+      btn.disabled = isLoading;
+      if (isLoading) {
+        btn.classList.add('opacity-75', 'cursor-wait');
+        btn.innerHTML = `<svg class="animate-spin h-4 w-4 text-white inline mr-1" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg><span>${text}</span>`;
+      } else {
+        btn.classList.remove('opacity-75', 'cursor-wait');
+        btn.innerHTML = `<span>${text}</span>`;
+      }
+    }
+
+    function formatNow() {
+      const d = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
+</body>
+</html>
